@@ -15,7 +15,6 @@ from app.core.exceptions import (
     RequestTimeoutError,
     StorageError,
     UnsupportedFormatError,
-    register_exception_handlers,
 )
 from app.core.logging import configure_logging, get_logger
 
@@ -35,7 +34,6 @@ __all__ = [
     "ExtractionError",
     "StorageError",
     "OcrNotConfiguredError",
-    "register_exception_handlers",
     "configure_logging",
     "get_logger",
 ]

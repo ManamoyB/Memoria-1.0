@@ -243,3 +243,35 @@ def test_base_validation_handles_missing_and_oversized_files(tmp_path: Path) -> 
     oversized.write_text("X" * 64, encoding="utf-8")
     with pytest.raises(FileTooLargeError):
         TextExtractor().extract(oversized, ctx)
+
+
+def test_csv_extractor_malformed_quoting_short_rows_and_bom(
+    tmp_path: Path, extraction_context: ExtractionContext
+) -> None:
+    short_row_csv = tmp_path / "short_row.csv"
+    short_row_csv.write_text("a,b,c\n1,2\n", encoding="utf-8")
+    with pytest.raises(CorruptedDocumentError):
+        CsvExtractor().extract(short_row_csv, extraction_context)
+
+    unclosed_quote_csv = tmp_path / "unclosed_quote.csv"
+    unclosed_quote_csv.write_text('a,b\n"unclosed,2\n3,4\n', encoding="utf-8")
+    with pytest.raises(CorruptedDocumentError):
+        CsvExtractor().extract(unclosed_quote_csv, extraction_context)
+
+    trailing_quote_csv = tmp_path / "trailing_quote.csv"
+    trailing_quote_csv.write_text('a,b\n"foo"bar,2\n', encoding="utf-8")
+    with pytest.raises(CorruptedDocumentError):
+        CsvExtractor().extract(trailing_quote_csv, extraction_context)
+
+    bom_csv = tmp_path / "bom.csv"
+    bom_csv.write_bytes(
+        codecs.BOM_UTF8 + 'id,label\n1,"hello, world"\n2,ready\n'.encode("utf-8")
+    )
+    bom_result = CsvExtractor().extract(bom_csv, extraction_context)
+    assert bom_result.encoding == "utf-8-sig"
+    assert bom_result.tables[0].headers == ["id", "label"]
+    assert bom_result.tables[0].records == [
+        {"id": "1", "label": "hello, world"},
+        {"id": "2", "label": "ready"},
+    ]
+

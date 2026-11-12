@@ -66,6 +66,11 @@ class CsvExtractor(BaseExtractor):
             raise EmptyDocumentError(f"CSV document '{file_path.name}' is empty.")
 
         delimiter = self._sniff_delimiter(decoded_text[:8192])
+        self._validate_csv_structure(
+            decoded_text,
+            delimiter=delimiter,
+            filename=file_path.name,
+        )
 
         try:
             df = pd.read_csv(
@@ -73,6 +78,7 @@ class CsvExtractor(BaseExtractor):
                 sep=delimiter,
                 dtype=str,
                 keep_default_na=False,
+                index_col=False,
                 on_bad_lines="error",
             )
         except pd.errors.EmptyDataError as exc:
@@ -211,6 +217,52 @@ class CsvExtractor(BaseExtractor):
             return dialect.delimiter
         except csv.Error:
             return ","
+
+    @staticmethod
+    def _validate_csv_structure(
+        text: str,
+        *,
+        delimiter: str,
+        filename: str,
+    ) -> None:
+        """Strictly validate CSV quoting and consistent column counts across all non-empty rows."""
+        reader = csv.reader(
+            io.StringIO(text, newline=""),
+            delimiter=delimiter,
+            strict=True,
+        )
+        expected_columns: int | None = None
+        record_number = 0
+
+        try:
+            for row in reader:
+                if not row:
+                    continue
+                if expected_columns is None:
+                    expected_columns = len(row)
+                    continue
+                record_number += 1
+                if len(row) != expected_columns:
+                    raise CorruptedDocumentError(
+                        f"Malformed CSV structure in '{filename}': inconsistent column count "
+                        f"at record {record_number} (expected {expected_columns}, found {len(row)}).",
+                        details={
+                            "filename": filename,
+                            "expected_columns": expected_columns,
+                            "actual_columns": len(row),
+                            "record_number": record_number,
+                        },
+                    )
+        except csv.Error as exc:
+            raise CorruptedDocumentError(
+                f"Malformed CSV syntax in '{filename}'.",
+                details={"reason": sanitize_error_reason(exc, replacement_name=filename)},
+            ) from exc
+
+        if expected_columns is None or expected_columns == 0:
+            raise EmptyDocumentError(
+                f"CSV document '{filename}' contains no rows or columns."
+            )
 
     @staticmethod
     def _is_missing_value(value: object) -> bool:
