@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: memoria-document-reader-agent
+    runtime: python
+    plan: starter
+    autoDeploy: true
+    healthCheckPath: /health
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: MEMORIA_ENVIRONMENT
+        value: production
+      - key: MEMORIA_DEBUG
+        value: "false"
+      - key: MEMORIA_LOG_LEVEL
+        value: INFO
+      - key: MEMORIA_UPLOAD_DIR
+        value: /tmp/memoria_uploads
+      - key: MEMORIA_CLEANUP_TEMP_UPLOADS
+        value: "true"
+      - key: MEMORIA_MAX_FILE_SIZE_MB
+        value: "25"
+      - key: MEMORIA_MAX_BATCH_FILES
+        value: "10"
+      - key: MEMORIA_CHUNK_SIZE
+        value: "3000"
+      - key: MEMORIA_CHUNK_OVERLAP
+        value: "300"
+      - key: MEMORIA_CSV_MAX_ROWS
+        value: "10000"
+      - key: MEMORIA_REQUEST_TIMEOUT_SECONDS
+        value: "30.0"
+      - key: MEMORIA_OCR_ENABLED
+        value: "false"
+      - key: MEMORIA_CORS_ORIGINS
+        sync: false
