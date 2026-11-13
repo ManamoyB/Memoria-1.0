@@ -10,6 +10,7 @@ from app.core.exceptions import (
     FileTooLargeError,
     InvalidEncodingError,
     MemoriaReaderError,
+    ObsidianPersistenceError,
     OcrNotConfiguredError,
     PasswordProtectedDocumentError,
     RequestTimeoutError,
@@ -34,6 +35,7 @@ __all__ = [
     "ExtractionError",
     "StorageError",
     "OcrNotConfiguredError",
+    "ObsidianPersistenceError",
     "configure_logging",
     "get_logger",
 ]

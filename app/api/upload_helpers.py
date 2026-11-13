@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
-from typing import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 
 from fastapi import UploadFile, status
 
 from app.core.config import Settings
-from app.core.exceptions import MemoriaReaderError
-from app.schemas.document import ChunkingConfig
+from app.core.exceptions import MemoriaReaderError, ObsidianPersistenceError
+from app.core.logging import get_logger
+from app.obsidian import ObsidianIngestionResult, ObsidianWriter
+from app.schemas.document import ChunkingConfig, NormalizedDocument
 
 _UPLOAD_READ_CHUNK_SIZE = 65536
+_ALLOWED_INBOX_FOLDER = "00-Inbox"
+logger = get_logger(__name__)
 
 
 async def iter_upload_chunks(upload_file: UploadFile) -> AsyncIterator[bytes]:
@@ -43,3 +47,35 @@ def resolve_chunking_config(
             details={"chunk_size": resolved_size, "chunk_overlap": resolved_overlap},
         )
     return ChunkingConfig(chunk_size=resolved_size, chunk_overlap=resolved_overlap)
+
+
+async def persist_document_to_obsidian(
+    *,
+    resolve_writer: Callable[[], Awaitable[ObsidianWriter]],
+    document: NormalizedDocument,
+    request_id: str | None = None,
+) -> ObsidianIngestionResult:
+    """Safely persist a NormalizedDocument to 00-Inbox without exposing local paths."""
+    try:
+        writer = await resolve_writer()
+        if writer.config.document_folder != _ALLOWED_INBOX_FOLDER:
+            raise ObsidianPersistenceError(
+                "Agent 01 Obsidian persistence is restricted to the 00-Inbox folder.",
+                details={"allowed_folder": _ALLOWED_INBOX_FOLDER},
+            )
+        return writer.ingest(document)
+    except MemoriaReaderError:
+        raise
+    except Exception as exc:
+        logger.exception(
+            "Failed to persist document %s to Obsidian",
+            document.document_id,
+            extra={"request_id": request_id},
+        )
+        raise ObsidianPersistenceError(
+            "Failed to persist normalized document to the configured Obsidian vault.",
+            details={
+                "document_id": document.document_id,
+                "error_type": type(exc).__name__,
+            },
+        ) from exc

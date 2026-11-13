@@ -42,6 +42,7 @@ def test_core_preserves_domain_exception_exports() -> None:
         "ExtractionError",
         "StorageError",
         "OcrNotConfiguredError",
+        "ObsidianPersistenceError",
     ]
     for name in expected_exceptions:
         assert hasattr(core_pkg, name), f"{name} missing from app.core"

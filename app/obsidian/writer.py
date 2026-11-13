@@ -110,17 +110,54 @@ class ObsidianWriter:
         repository = self._repository_for_vault(vault_root)
         content_hash = document.source.content_hash
         existing = repository.find(document.document_id, content_hash)
+        folder = (vault_root / self.config.document_folder).resolve()
         if existing is not None:
             existing_path = (vault_root / existing.note_path).resolve()
             if vault_root not in existing_path.parents:
                 raise ValueError("Stored ingestion path escapes the Obsidian vault.")
+            if existing_path.is_file():
+                return ObsidianIngestionResult(
+                    document_id=document.document_id,
+                    content_hash=content_hash,
+                    note_path=existing_path,
+                    vault_relative_path=existing.note_path,
+                    status="already_ingested",
+                    created=False,
+                )
+
+            # Ledger entry exists, but the recorded Markdown file is missing on disk.
+            if (
+                not existing_path.exists()
+                and not existing_path.is_symlink()
+                and (folder == existing_path.parent or folder in existing_path.parents)
+            ):
+                existing_path.parent.mkdir(parents=True, exist_ok=True)
+                destination = existing_path
+            else:
+                destination = self._available_destination(vault_root, document)
+
+            markdown = self.note_builder.build(document)
+            self._atomic_write(destination, markdown)
+            relative_path = destination.relative_to(vault_root).as_posix()
+            recovered_record = IngestionRecord(
+                document_id=document.document_id,
+                content_hash=content_hash,
+                note_path=relative_path,
+                ingested_at=datetime.now(timezone.utc).isoformat(),
+            )
+            try:
+                repository.upsert(recovered_record)
+            except Exception:
+                destination.unlink(missing_ok=True)
+                raise
+
             return ObsidianIngestionResult(
                 document_id=document.document_id,
                 content_hash=content_hash,
-                note_path=existing_path,
-                vault_relative_path=existing.note_path,
-                status="already_ingested",
-                created=False,
+                note_path=destination,
+                vault_relative_path=relative_path,
+                status="recreated",
+                created=True,
             )
 
         destination = self._available_destination(vault_root, document)

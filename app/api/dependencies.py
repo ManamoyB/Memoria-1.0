@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import inspect
+from collections.abc import Awaitable, Callable
 from functools import lru_cache
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Request
 
 from app.core.config import Settings, get_settings
+from app.core.exceptions import ObsidianPersistenceError
 from app.extractors import (
     CsvExtractor,
     DocxExtractor,
@@ -18,6 +21,7 @@ from app.extractors import (
     TesseractOcrHook,
     TextExtractor,
 )
+from app.obsidian import ObsidianConfig, ObsidianWriter
 from app.schemas.common import DocumentFormat
 from app.schemas.document import ChunkingConfig
 from app.services import (
@@ -145,3 +149,32 @@ def get_agent_service(
 ) -> DocumentReaderAgentService:
     """Provide the inter-agent DocumentReaderAgentService facade."""
     return DocumentReaderAgentService(controller=controller)
+
+
+def get_obsidian_writer() -> ObsidianWriter:
+    """Provide an ObsidianWriter configured from environment variables."""
+    try:
+        config = ObsidianConfig.from_env()
+    except ValueError as exc:
+        raise ObsidianPersistenceError(
+            "Obsidian persistence is not configured.",
+            details={"reason": "MEMORIA_OBSIDIAN_VAULT_PATH is not configured."},
+        ) from exc
+    return ObsidianWriter(config)
+
+
+def get_obsidian_writer_resolver(
+    request: Request,
+) -> Callable[[], Awaitable[ObsidianWriter]]:
+    """Return a lazy ObsidianWriter resolver so disabled requests never touch the vault."""
+
+    async def _resolve() -> ObsidianWriter:
+        override = request.app.dependency_overrides.get(get_obsidian_writer)
+        if override is not None:
+            resolved = override()
+            if inspect.isawaitable(resolved):
+                return await resolved
+            return resolved
+        return get_obsidian_writer()
+
+    return _resolve

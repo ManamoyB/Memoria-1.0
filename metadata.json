@@ -2,5 +2,7 @@
   "name": "MemoriaOS Document Reader Agent",
   "description": "Modular FastAPI document extraction and structural normalization workbench for MemoriaOS.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

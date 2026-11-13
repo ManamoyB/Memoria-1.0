@@ -2,13 +2,23 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile, status
 
-from app.api.dependencies import get_agent_service, get_app_settings
-from app.api.upload_helpers import iter_upload_chunks, resolve_chunking_config
+from app.api.dependencies import (
+    get_agent_service,
+    get_app_settings,
+    get_obsidian_writer_resolver,
+)
+from app.api.upload_helpers import (
+    iter_upload_chunks,
+    persist_document_to_obsidian,
+    resolve_chunking_config,
+)
 from app.core.config import Settings
+from app.obsidian import ObsidianWriter
 from app.schemas.agent import AgentTaskResponse, MemoriaAgentId
 from app.services.agent_service import DocumentReaderAgentService
 
@@ -24,13 +34,20 @@ router = APIRouter(prefix="/agent", tags=["Inter-Agent Communication"])
         "Inter-agent HTTP contract callable by Agent 07 (Orchestrator) or external "
         "MemoriaOS workflows. Always returns a standardized AgentTaskResponse envelope "
         "with task_id, agent_id, document_id, status, output_type, output, errors, "
-        "metadata, and next_agent."
+        "metadata, and next_agent. When save_to_obsidian=true, optionally persists the "
+        "normalized output into 00-Inbox and adds obsidian_status, obsidian_created, "
+        "and obsidian_note_path to metadata."
     ),
 )
 async def execute_agent_task(
+    request: Request,
     file: Annotated[UploadFile, File(description="Document file to ingest.")],
     agent_service: Annotated[DocumentReaderAgentService, Depends(get_agent_service)],
     settings: Annotated[Settings, Depends(get_app_settings)],
+    resolve_obsidian_writer: Annotated[
+        Callable[[], Awaitable[ObsidianWriter]],
+        Depends(get_obsidian_writer_resolver),
+    ],
     task_id: Annotated[
         str | None,
         Query(description="Optional upstream Orchestrator task_id to propagate."),
@@ -41,6 +58,15 @@ async def execute_agent_task(
     ] = MemoriaAgentId.CONTEXT_UNDERSTANDING,
     chunk_size: Annotated[int | None, Query(ge=100, le=50000)] = None,
     chunk_overlap: Annotated[int | None, Query(ge=0, le=10000)] = None,
+    save_to_obsidian: Annotated[
+        bool,
+        Query(
+            description=(
+                "Optional opt-in flag to persist the normalized output to the configured "
+                "local Obsidian vault's 00-Inbox folder."
+            ),
+        ),
+    ] = False,
 ) -> AgentTaskResponse:
     """Run extraction + normalization and return the inter-agent AgentTaskResponse."""
     chunking_cfg = resolve_chunking_config(
@@ -48,7 +74,7 @@ async def execute_agent_task(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
     )
-    return await agent_service.execute_async_chunks(
+    task_response = await agent_service.execute_async_chunks(
         iter_upload_chunks(file),
         filename=file.filename or "untitled",
         content_type=file.content_type,
@@ -56,3 +82,14 @@ async def execute_agent_task(
         next_agent=next_agent.value,
         chunking_config=chunking_cfg,
     )
+    if save_to_obsidian and task_response.output is not None:
+        request_id = getattr(request.state, "request_id", None)
+        ingestion = await persist_document_to_obsidian(
+            resolve_writer=resolve_obsidian_writer,
+            document=task_response.output,
+            request_id=request_id,
+        )
+        task_response.metadata["obsidian_status"] = ingestion.status
+        task_response.metadata["obsidian_created"] = ingestion.created
+        task_response.metadata["obsidian_note_path"] = ingestion.vault_relative_path
+    return task_response

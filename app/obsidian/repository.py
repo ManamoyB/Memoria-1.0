@@ -62,3 +62,16 @@ class IngestionRepository:
                    VALUES (?, ?, ?, ?)""",
                 (record.document_id, record.content_hash, record.note_path, record.ingested_at),
             )
+
+    def upsert(self, record: IngestionRecord) -> None:
+        """Insert or update an ingestion ledger record for missing-note recovery."""
+        with self._connect() as connection:
+            connection.execute(
+                """INSERT INTO obsidian_ingestions
+                   (document_id, content_hash, note_path, ingested_at)
+                   VALUES (?, ?, ?, ?)
+                   ON CONFLICT(document_id, content_hash) DO UPDATE SET
+                       note_path = excluded.note_path,
+                       ingested_at = excluded.ingested_at""",
+                (record.document_id, record.content_hash, record.note_path, record.ingested_at),
+            )

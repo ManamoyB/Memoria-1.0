@@ -115,3 +115,11 @@ class OcrNotConfiguredError(MemoriaReaderError):
 
     status_code = HTTPStatus.NOT_IMPLEMENTED
     error_code = "OCR_NOT_CONFIGURED"
+
+
+class ObsidianPersistenceError(MemoriaReaderError):
+    """Raised when persisting a normalized document to an Obsidian vault fails."""
+
+    status_code = HTTPStatus.INTERNAL_SERVER_ERROR
+    error_code = "OBSIDIAN_PERSISTENCE_ERROR"
+

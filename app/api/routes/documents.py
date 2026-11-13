@@ -2,20 +2,37 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Path, Query, Request, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Path,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+    status,
+)
 
 from app.api.dependencies import (
     get_app_settings,
     get_extractor_registry,
+    get_obsidian_writer_resolver,
     get_processing_controller,
     get_status_tracker,
 )
-from app.api.upload_helpers import iter_upload_chunks, resolve_chunking_config
+from app.api.upload_helpers import (
+    iter_upload_chunks,
+    persist_document_to_obsidian,
+    resolve_chunking_config,
+)
 from app.core.config import Settings
 from app.core.exceptions import MemoriaReaderError
 from app.extractors.registry import ExtractorRegistry
+from app.obsidian import ObsidianWriter
 from app.schemas.common import (
     DocumentStatusResponse,
     ErrorResponse,
@@ -248,6 +265,22 @@ async def get_supported_formats(
     return SupportedFormatsResponse(formats=registry.list_capabilities())
 
 
+_OBSIDIAN_HEADERS_OPENAPI = {
+    "X-Obsidian-Status": {
+        "description": "Obsidian ingestion outcome (created, recreated, or already_ingested) when save_to_obsidian=true.",
+        "schema": {"type": "string"},
+    },
+    "X-Obsidian-Created": {
+        "description": "Whether a note file was written on disk ('true' or 'false') when save_to_obsidian=true.",
+        "schema": {"type": "string"},
+    },
+    "X-Obsidian-Note-Path": {
+        "description": "Vault-relative path of the persisted Markdown note inside 00-Inbox when save_to_obsidian=true.",
+        "schema": {"type": "string"},
+    },
+}
+
+
 @router.post(
     "/process",
     response_model=NormalizedDocument,
@@ -257,11 +290,14 @@ async def get_supported_formats(
         "Accepts a multipart file upload (PDF, DOCX, TXT, Markdown, or CSV), "
         "validates upload size, MIME type, and magic-byte signature, extracts "
         "structural content, normalizes text, generates configurable chunks, cleans up "
-        "temporary files, and returns a MemoriaOS NormalizedDocument."
+        "temporary files, and returns a MemoriaOS NormalizedDocument. When "
+        "save_to_obsidian=true, idempotently writes a Markdown note to 00-Inbox and "
+        "emits X-Obsidian-Status, X-Obsidian-Created, and X-Obsidian-Note-Path headers."
     ),
     responses={
         200: {
             "description": "Document extracted, normalized, and chunked successfully.",
+            "headers": _OBSIDIAN_HEADERS_OPENAPI,
             "content": {"application/json": {"example": _PROCESS_SUCCESS_EXAMPLE}},
         },
         **_COMMON_UPLOAD_ERROR_RESPONSES,
@@ -272,17 +308,32 @@ async def get_supported_formats(
     response_model=NormalizedDocument,
     status_code=status.HTTP_200_OK,
     summary="Alias for POST /api/v1/documents/process",
-    description="Accepts a multipart file upload and returns a standardized NormalizedDocument.",
-    responses=_COMMON_UPLOAD_ERROR_RESPONSES,
+    description=(
+        "Accepts a multipart file upload and returns a standardized NormalizedDocument. "
+        "Supports optional save_to_obsidian=true persistence into 00-Inbox."
+    ),
+    responses={
+        200: {
+            "description": "Document extracted, normalized, and chunked successfully.",
+            "headers": _OBSIDIAN_HEADERS_OPENAPI,
+            "content": {"application/json": {"example": _PROCESS_SUCCESS_EXAMPLE}},
+        },
+        **_COMMON_UPLOAD_ERROR_RESPONSES,
+    },
 )
 async def process_document(
     request: Request,
+    response: Response,
     file: Annotated[
         UploadFile,
         File(description="Multipart document upload (PDF, DOCX, TXT, Markdown, or CSV)."),
     ],
     controller: Annotated[ProcessingController, Depends(get_processing_controller)],
     settings: Annotated[Settings, Depends(get_app_settings)],
+    resolve_obsidian_writer: Annotated[
+        Callable[[], Awaitable[ObsidianWriter]],
+        Depends(get_obsidian_writer_resolver),
+    ],
     chunk_size: Annotated[
         int | None,
         Query(
@@ -301,6 +352,15 @@ async def process_document(
             examples=[300, 150],
         ),
     ] = None,
+    save_to_obsidian: Annotated[
+        bool,
+        Query(
+            description=(
+                "Optional opt-in flag to persist the normalized document into the configured "
+                "local Obsidian vault's 00-Inbox folder."
+            ),
+        ),
+    ] = False,
 ) -> NormalizedDocument:
     """Accept a multipart document upload and process it via ProcessingController."""
     request_id = getattr(request.state, "request_id", None)
@@ -309,13 +369,23 @@ async def process_document(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
     )
-    return await controller.process_async_chunks(
+    document = await controller.process_async_chunks(
         iter_upload_chunks(file),
         filename=file.filename or "untitled",
         content_type=file.content_type,
         chunking_config=chunking_cfg,
         request_id=request_id,
     )
+    if save_to_obsidian:
+        ingestion = await persist_document_to_obsidian(
+            resolve_writer=resolve_obsidian_writer,
+            document=document,
+            request_id=request_id,
+        )
+        response.headers["X-Obsidian-Status"] = ingestion.status
+        response.headers["X-Obsidian-Created"] = "true" if ingestion.created else "false"
+        response.headers["X-Obsidian-Note-Path"] = ingestion.vault_relative_path
+    return document
 
 
 @router.post(
