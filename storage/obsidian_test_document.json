@@ -1,0 +1,22 @@
+{
+  "document_id": "memoria-obsidian-test-0001",
+  "agent": "memoria-document-reader",
+  "processing_time_ms": 1.0,
+  "status": "success",
+  "content": "This is a MemoriaOS Obsidian integration test.\n\nThe purpose of this document is to verify that Agent 01 normalized JSON output can be validated, converted into Markdown, and safely stored inside the 00-Inbox folder.\n\nThis is a test document. It does not contain personal knowledge or production data.",
+  "source": {
+    "extension": ".md",
+    "filename": "MemoriaOS-Integration-Test.md",
+    "mime_type": "text/markdown",
+    "content_hash": "sha256:8459077ff0464480acff53746a06681d9f6de76e521a065b05bead7099a2e21e",
+    "byte_size": 300,
+    "format": "markdown"
+  },
+  "schema_version": "1.0.0",
+  "metadata": {
+    "extractor_name": "manual-test",
+    "title": "MemoriaOS Integration Test"
+  },
+  "document_type": "markdown",
+  "filename": "MemoriaOS-Integration-Test.md"
+}

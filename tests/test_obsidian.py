@@ -76,7 +76,7 @@ def test_vault_structure_and_note_write(tmp_path: Path) -> None:
     assert result.status == "created"
     assert result.note_path.is_file()
     assert (vault / "00-Inbox").is_dir()
-    assert (vault / "01-Raw-Documents").is_dir()
+    assert (vault / "00-Inbox").is_dir()
     note = result.note_path.read_text(encoding="utf-8")
     assert note.startswith("---\n")
     assert 'document_id: "doc-test-001"' in note
@@ -97,7 +97,7 @@ def test_duplicate_document_and_hash_is_idempotent(tmp_path: Path) -> None:
     assert second.created is False
     assert second.status == "already_ingested"
     assert first.note_path == second.note_path
-    assert len(list((tmp_path / "vault" / "01-Raw-Documents").glob("*.md"))) == 1
+    assert len(list((tmp_path / "vault" / "00-Inbox").glob("*.md"))) == 1
 
 
 def test_changed_hash_preserves_previous_note(tmp_path: Path) -> None:
@@ -118,7 +118,7 @@ def test_changed_hash_preserves_previous_note(tmp_path: Path) -> None:
 
 def test_unrelated_existing_note_is_never_overwritten(tmp_path: Path) -> None:
     vault = tmp_path / "vault"
-    folder = vault / "01-Raw-Documents"
+    folder = vault / "00-Inbox"
     folder.mkdir(parents=True)
     protected = folder / "Research - A Test.md"
     protected.write_text("User-authored note", encoding="utf-8")

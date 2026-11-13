@@ -9,14 +9,16 @@ from pathlib import Path
 
 DEFAULT_VAULT_FOLDERS = (
     "00-Inbox",
-    "01-Raw-Documents",
-    "02-Knowledge",
-    "03-Topics",
-    "04-Entities",
-    "05-Projects",
-    "06-Summaries",
-    "07-Relationships",
-    "08-System",
+    "01-Profile",
+    "02-Episodic-Memory",
+    "03-Semantic-Memory",
+    "04-Procedural-Memory",
+    "05-Preferences",
+    "06-Projects",
+    "07-Insights",
+    "08-Archive",
+    "09-Daily-Logs",
+    "10-System",
 )
 
 
@@ -25,7 +27,7 @@ class ObsidianConfig:
     """Filesystem locations for the local Obsidian integration."""
 
     vault_path: Path
-    document_folder: str = "01-Raw-Documents"
+    document_folder: str = "00-Inbox"
     database_path: Path | None = None
     create_vault_structure: bool = True
     folders: tuple[str, ...] = field(default=DEFAULT_VAULT_FOLDERS)
