@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import tempfile
 from functools import lru_cache
 from pathlib import Path
-import tempfile
 from typing import Literal
 
 from pydantic import AliasChoices, Field, computed_field, field_validator, model_validator
@@ -38,9 +38,7 @@ class Settings(BaseSettings):
         default="development"
     )
     debug: bool = Field(default=False)
-    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
-        default="INFO"
-    )
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(default="INFO")
 
     # Server & API routing (supports Render's unprefixed PORT env var)
     host: str = Field(default="0.0.0.0")
@@ -92,31 +90,23 @@ class Settings(BaseSettings):
             )
         return self
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def max_file_size_bytes(self) -> int:
         """Maximum permitted upload size in bytes."""
         return self.max_file_size_mb * 1024 * 1024
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def cors_origin_list(self) -> list[str]:
         """Parsed list of allowed CORS origins."""
-        return [
-            origin.strip()
-            for origin in self.cors_origins.split(",")
-            if origin.strip()
-        ]
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def allowed_format_list(self) -> list[str]:
         """Parsed list of allowed canonical document format names."""
-        return [
-            fmt.strip().lower()
-            for fmt in self.allowed_formats.split(",")
-            if fmt.strip()
-        ]
+        return [fmt.strip().lower() for fmt in self.allowed_formats.split(",") if fmt.strip()]
 
 
 @lru_cache(maxsize=1)

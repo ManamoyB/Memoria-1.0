@@ -122,4 +122,3 @@ class ObsidianPersistenceError(MemoriaReaderError):
 
     status_code = HTTPStatus.INTERNAL_SERVER_ERROR
     error_code = "OBSIDIAN_PERSISTENCE_ERROR"
-

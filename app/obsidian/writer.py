@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import tempfile
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -41,7 +41,7 @@ class ObsidianWriter:
         self._repository = repository
 
     @classmethod
-    def from_env(cls) -> "ObsidianWriter":
+    def from_env(cls) -> ObsidianWriter:
         return cls(ObsidianConfig.from_env())
 
     def _repository_for_vault(self, vault_root: Path) -> IngestionRepository:
@@ -66,15 +66,15 @@ class ObsidianWriter:
                 temporary.flush()
                 os.fsync(temporary.fileno())
                 temporary_path = Path(temporary.name)
-            os.replace(temporary_path, destination)
+            # Publish atomically without replacing a note created by another writer.
+            os.link(temporary_path, destination)
+            temporary_path.unlink()
         except OSError:
             if temporary_path is not None:
                 temporary_path.unlink(missing_ok=True)
             raise
 
-    def _available_destination(
-        self, vault_root: Path, document: NormalizedDocument
-    ) -> Path:
+    def _available_destination(self, vault_root: Path, document: NormalizedDocument) -> Path:
         folder = (vault_root / self.config.document_folder).resolve()
         if vault_root not in folder.parents:
             raise ValueError("Configured document folder escapes the Obsidian vault.")
@@ -93,9 +93,7 @@ class ObsidianWriter:
             raise ValueError("Generated note path escapes the configured document folder.")
         return resolved
 
-    def ingest(
-        self, payload: NormalizedDocument | dict[str, object]
-    ) -> ObsidianIngestionResult:
+    def ingest(self, payload: NormalizedDocument | dict[str, object]) -> ObsidianIngestionResult:
         """Validate, render, and persist a normalized document idempotently."""
         try:
             document = (
@@ -143,7 +141,7 @@ class ObsidianWriter:
                 document_id=document.document_id,
                 content_hash=content_hash,
                 note_path=relative_path,
-                ingested_at=datetime.now(timezone.utc).isoformat(),
+                ingested_at=datetime.now(UTC).isoformat(),
             )
             try:
                 repository.upsert(recovered_record)
@@ -168,7 +166,7 @@ class ObsidianWriter:
             document_id=document.document_id,
             content_hash=content_hash,
             note_path=relative_path,
-            ingested_at=datetime.now(timezone.utc).isoformat(),
+            ingested_at=datetime.now(UTC).isoformat(),
         )
         try:
             repository.record(record)

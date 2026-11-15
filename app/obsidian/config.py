@@ -6,7 +6,6 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-
 DEFAULT_VAULT_FOLDERS = (
     "00-Inbox",
     "01-Profile",
@@ -33,7 +32,7 @@ class ObsidianConfig:
     folders: tuple[str, ...] = field(default=DEFAULT_VAULT_FOLDERS)
 
     @classmethod
-    def from_env(cls) -> "ObsidianConfig":
+    def from_env(cls) -> ObsidianConfig:
         raw_path = os.getenv("MEMORIA_OBSIDIAN_VAULT_PATH")
         if not raw_path:
             raise ValueError(

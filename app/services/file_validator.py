@@ -1,4 +1,6 @@
-"""File validation guardrails: size limits, allowed types, MIME checks, and path traversal safety."""
+"""
+File validation guardrails: size limits, allowed types, MIME checks, and path traversal safety.
+"""
 
 from __future__ import annotations
 

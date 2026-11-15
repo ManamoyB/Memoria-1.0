@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import AsyncIterator
 
 from app.core.exceptions import (
     CorruptedDocumentError,
@@ -75,7 +75,9 @@ class DocumentReaderAgentService:
                 exc=exc,
             )
         except Exception:
-            logger.exception("Unexpected error in agent execute_file", extra={"request_id": resolved_task_id})
+            logger.exception(
+                "Unexpected error in agent execute_file", extra={"request_id": resolved_task_id}
+            )
             return self._build_unexpected_error_response(
                 task_id=resolved_task_id,
                 filename=safe_name,
@@ -116,7 +118,9 @@ class DocumentReaderAgentService:
                 exc=exc,
             )
         except Exception:
-            logger.exception("Unexpected error in agent execute_bytes", extra={"request_id": resolved_task_id})
+            logger.exception(
+                "Unexpected error in agent execute_bytes", extra={"request_id": resolved_task_id}
+            )
             return self._build_unexpected_error_response(
                 task_id=resolved_task_id,
                 filename=safe_name,
@@ -157,7 +161,10 @@ class DocumentReaderAgentService:
                 exc=exc,
             )
         except Exception:
-            logger.exception("Unexpected error in agent execute_async_chunks", extra={"request_id": resolved_task_id})
+            logger.exception(
+                "Unexpected error in agent execute_async_chunks",
+                extra={"request_id": resolved_task_id},
+            )
             return self._build_unexpected_error_response(
                 task_id=resolved_task_id,
                 filename=safe_name,

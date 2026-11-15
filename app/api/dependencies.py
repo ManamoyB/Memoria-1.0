@@ -5,7 +5,7 @@ from __future__ import annotations
 import inspect
 from collections.abc import Awaitable, Callable
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, cast
 
 from fastapi import Depends, Request
 
@@ -173,8 +173,8 @@ def get_obsidian_writer_resolver(
         if override is not None:
             resolved = override()
             if inspect.isawaitable(resolved):
-                return await resolved
-            return resolved
+                return cast(ObsidianWriter, await resolved)
+            return cast(ObsidianWriter, resolved)
         return get_obsidian_writer()
 
     return _resolve

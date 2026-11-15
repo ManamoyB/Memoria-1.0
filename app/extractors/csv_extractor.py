@@ -8,7 +8,7 @@ import re
 import time
 from pathlib import Path
 
-import pandas as pd
+import pandas as pd  # type: ignore[import-untyped]
 
 from app.core.exceptions import (
     CorruptedDocumentError,
@@ -33,7 +33,10 @@ _BOOL_VALS = {"true", "false", "yes", "no"}
 
 
 class CsvExtractor(BaseExtractor):
-    """Extracts columns, inferred data types, records, row counts, and bounded rows from CSV files."""
+    """
+    Extracts columns, inferred data types, records, row counts, and bounded rows from CSV
+    files.
+    """
 
     name = "pandas_csv_extractor"
     supported_format = DocumentFormat.CSV
@@ -47,7 +50,10 @@ class CsvExtractor(BaseExtractor):
         file_path: Path,
         context: ExtractionContext,
     ) -> ExtractedContent:
-        """Parse CSV via Pandas, infer column data types, preserve records, and enforce row limits."""
+        """
+        Parse CSV via Pandas, infer column data types, preserve records, and enforce row
+        limits.
+        """
         started = time.perf_counter()
         self.validate_file(file_path, context)
 
@@ -98,16 +104,15 @@ class CsvExtractor(BaseExtractor):
 
         headers = [str(col).strip() for col in df.columns.tolist()]
         if not headers:
-            raise EmptyDocumentError(
-                f"CSV document '{file_path.name}' contains no column headers."
-            )
+            raise EmptyDocumentError(f"CSV document '{file_path.name}' contains no column headers.")
 
         total_row_count = int(len(df.index))
         row_limit = max(1, context.csv_max_rows)
         truncated = total_row_count > row_limit
         if truncated:
             warnings.append(
-                f"CSV row count ({total_row_count}) exceeded configured limit ({row_limit}); truncated to {row_limit} rows."
+                f"CSV row count ({total_row_count}) exceeded configured limit ({row_limit}); "
+                f"truncated to {row_limit} rows."
             )
             df = df.iloc[:row_limit]
 
@@ -116,24 +121,15 @@ class CsvExtractor(BaseExtractor):
             for idx, header in enumerate(headers)
         }
         missing_value_counts = {
-            header: sum(
-                1 for val in df.iloc[:, idx].tolist() if self._is_missing_value(val)
-            )
+            header: sum(1 for val in df.iloc[:, idx].tolist() if self._is_missing_value(val))
             for idx, header in enumerate(headers)
         }
         if total_row_count == 0:
             warnings.append("CSV contains column headers but zero data rows.")
 
-        rows = [
-            [str(cell).strip() for cell in row]
-            for row in df.values.tolist()
-        ]
+        rows = [[str(cell).strip() for cell in row] for row in df.values.tolist()]
         records = [
-            {
-                headers[col_idx]: row[col_idx]
-                for col_idx in range(len(headers))
-            }
-            for row in rows
+            {headers[col_idx]: row[col_idx] for col_idx in range(len(headers))} for row in rows
         ]
 
         raw_table = RawTable(
@@ -245,7 +241,8 @@ class CsvExtractor(BaseExtractor):
                 if len(row) != expected_columns:
                     raise CorruptedDocumentError(
                         f"Malformed CSV structure in '{filename}': inconsistent column count "
-                        f"at record {record_number} (expected {expected_columns}, found {len(row)}).",
+                        f"at record {record_number} "
+                        f"(expected {expected_columns}, found {len(row)}).",
                         details={
                             "filename": filename,
                             "expected_columns": expected_columns,
@@ -260,9 +257,7 @@ class CsvExtractor(BaseExtractor):
             ) from exc
 
         if expected_columns is None or expected_columns == 0:
-            raise EmptyDocumentError(
-                f"CSV document '{filename}' contains no rows or columns."
-            )
+            raise EmptyDocumentError(f"CSV document '{filename}' contains no rows or columns.")
 
     @staticmethod
     def _is_missing_value(value: object) -> bool:
@@ -271,9 +266,7 @@ class CsvExtractor(BaseExtractor):
     @classmethod
     def _infer_column_type(cls, values: list[object]) -> str:
         """Infer a semantic column data type from non-missing string values."""
-        non_empty = [
-            str(v).strip() for v in values if not cls._is_missing_value(v)
-        ]
+        non_empty = [str(v).strip() for v in values if not cls._is_missing_value(v)]
         if not non_empty:
             return "empty"
 

@@ -6,7 +6,7 @@ import re
 import time
 from pathlib import Path
 
-from app.core.exceptions import EmptyDocumentError, ExtractionError, InvalidEncodingError
+from app.core.exceptions import EmptyDocumentError, ExtractionError
 from app.extractors.base import (
     BaseExtractor,
     ExtractedContent,
@@ -58,19 +58,12 @@ class TextExtractor(BaseExtractor):
 
         normalized_raw = canonicalize_whitespace(decoded)
         if not normalized_raw:
-            raise EmptyDocumentError(
-                f"Text document '{file_path.name}' contains only whitespace."
-            )
+            raise EmptyDocumentError(f"Text document '{file_path.name}' contains only whitespace.")
 
         paragraphs = [
-            chunk.strip()
-            for chunk in _PARAGRAPH_SPLIT_RE.split(normalized_raw)
-            if chunk.strip()
+            chunk.strip() for chunk in _PARAGRAPH_SPLIT_RE.split(normalized_raw) if chunk.strip()
         ]
-        blocks = [
-            RawBlock(type=BlockType.PARAGRAPH, text=paragraph)
-            for paragraph in paragraphs
-        ]
+        blocks = [RawBlock(type=BlockType.PARAGRAPH, text=paragraph) for paragraph in paragraphs]
 
         elapsed_ms = round((time.perf_counter() - started) * 1000.0, 2)
         return ExtractedContent(

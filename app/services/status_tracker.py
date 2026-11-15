@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import OrderedDict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from threading import Lock
 
 from app.core.exceptions import DocumentStatusNotFoundError
@@ -34,7 +34,7 @@ class DocumentStatusTracker:
             block_count=document.metadata.block_count,
             processing_time_ms=document.processing_time_ms,
             warnings=list(document.extraction_warnings),
-            updated_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(UTC),
         )
         with self._lock:
             if document.document_id in self._records:

@@ -50,7 +50,10 @@ _PATH_TOKEN_RE = re.compile(r"(?:[A-Za-z]:)?(?:[/\\][^\s:'\",]+)+")
 
 
 def sanitize_filename(filename: str | None) -> str:
-    """Strip directory components (POSIX/Windows) and unsafe characters while preserving extension."""
+    """
+    Strip directory components (POSIX/Windows) and unsafe characters while preserving
+    extension.
+    """
     if not filename:
         return "untitled"
     normalized_sep = filename.replace("\\", "/")
@@ -66,7 +69,9 @@ def sanitize_filename(filename: str | None) -> str:
 
 
 def sanitize_error_reason(exc: Exception, *, replacement_name: str = "<document>") -> str:
-    """Redact local filesystem paths from library exception messages before returning API details."""
+    """
+    Redact local filesystem paths from library exception messages before returning API details.
+    """
     raw = str(exc)
     if not raw:
         return type(exc).__name__

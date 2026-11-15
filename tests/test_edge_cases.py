@@ -55,9 +55,7 @@ def test_empty_documents_across_all_formats(
         DocxExtractor().extract(empty_docx, extraction_context)
 
 
-def test_corrupted_pdf_and_corrupted_docx(
-    tmp_path: Path, client: TestClient
-) -> None:
+def test_corrupted_pdf_and_corrupted_docx(tmp_path: Path, client: TestClient) -> None:
     bad_pdf = client.post(
         "/api/v1/documents/process",
         files={"file": ("corrupt.pdf", b"%PDF-1.7\n%%EOFcorrupted-garbage", "application/pdf")},
@@ -155,13 +153,13 @@ def test_very_large_pdf_preserves_all_pages_and_chunks(client: TestClient, tmp_p
     assert 120 in covered_pages
 
 
-def test_pdf_mixed_scanned_and_selectable_pages(
-    client: TestClient, tmp_path: Path
-) -> None:
+def test_pdf_mixed_scanned_and_selectable_pages(client: TestClient, tmp_path: Path) -> None:
     mixed_pdf = tmp_path / "mixed_scan.pdf"
     pdf = fitz.open()
     p1 = pdf.new_page()
-    p1.insert_text((72, 72), "Selectable page one text exceeding threshold chars easily.", fontsize=12)
+    p1.insert_text(
+        (72, 72), "Selectable page one text exceeding threshold chars easily.", fontsize=12
+    )
     pdf.new_page()  # Page 2 has zero text -> scanned/empty
     pdf.save(str(mixed_pdf))
     pdf.close()
@@ -179,9 +177,7 @@ def test_pdf_mixed_scanned_and_selectable_pages(
     assert body["processing_statistics"]["scanned_page_count"] == 1
 
 
-def test_docx_with_multiple_tables_and_sparse_cells(
-    client: TestClient, tmp_path: Path
-) -> None:
+def test_docx_with_multiple_tables_and_sparse_cells(client: TestClient, tmp_path: Path) -> None:
     docx_path = tmp_path / "tables.docx"
     doc = DocxBuilder()
     doc.add_heading("Financial & Agent Matrix", level=1)
@@ -220,10 +216,7 @@ def test_csv_missing_values_and_header_only_edge_cases(
 ) -> None:
     csv_missing = tmp_path / "missing_vals.csv"
     csv_missing.write_text(
-        "id,score,flag,note\n"
-        "1,10.5,true,alpha\n"
-        "2,N/A,null,\n"
-        "3,nan,false,none\n",
+        "id,score,flag,note\n1,10.5,true,alpha\n2,N/A,null,\n3,nan,false,none\n",
         encoding="utf-8",
     )
     result = CsvExtractor().extract(csv_missing, extraction_context)

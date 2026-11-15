@@ -154,10 +154,7 @@ class BaseExtractor(ABC):
                 details={"filename": file_path.name},
             )
 
-        if (
-            context.max_file_size_bytes is not None
-            and byte_size > context.max_file_size_bytes
-        ):
+        if context.max_file_size_bytes is not None and byte_size > context.max_file_size_bytes:
             raise FileTooLargeError(
                 f"Document '{file_path.name}' ({byte_size} bytes) exceeds maximum limit "
                 f"of {context.max_file_size_bytes} bytes.",

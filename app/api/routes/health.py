@@ -46,7 +46,10 @@ _HEALTH_EXAMPLE = {
     "/",
     response_model=ServiceInfoResponse,
     summary="Service information and status",
-    description="Returns MemoriaOS Document Reader Agent metadata, API prefix, Swagger URL, and supported formats.",
+    description=(
+        "Returns MemoriaOS Document Reader Agent metadata, API prefix, Swagger URL, "
+        "and supported formats."
+    ),
     responses={
         200: {
             "description": "Service information retrieved successfully.",
@@ -74,7 +77,9 @@ async def get_service_info(
     "/health",
     response_model=HealthResponse,
     summary="Application health check",
-    description="Liveness probe reporting service version, OCR configuration, and active extractors.",
+    description=(
+        "Liveness probe reporting service version, OCR configuration, and active extractors."
+    ),
     responses={
         200: {
             "description": "Service is healthy.",

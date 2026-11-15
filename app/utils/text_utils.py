@@ -74,7 +74,8 @@ def decode_text_bytes(
                         details={"attempted_encoding": encoding},
                     )
                 warnings.append(
-                    f"Decoded text using fallback encoding '{encoding}' after '{preferred_norm}' failed."
+                    f"Decoded text using fallback encoding '{encoding}' "
+                    f"after '{preferred_norm}' failed."
                 )
             return text, encoding, warnings
         except UnicodeDecodeError:

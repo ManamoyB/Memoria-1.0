@@ -65,9 +65,7 @@ def client(app_instance: FastAPI) -> Iterator[TestClient]:
 async def async_client(app_instance: FastAPI) -> AsyncIterator[httpx.AsyncClient]:
     """Asynchronous HTTPX client bound directly to ASGI app."""
     transport = httpx.ASGITransport(app=app_instance)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://testserver"
-    ) as ac:
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as ac:
         yield ac
 
 

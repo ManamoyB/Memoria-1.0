@@ -403,9 +403,7 @@ def test_api_agent_execute_obsidian_metadata_and_failures(
     assert "secret_agent_vault" not in failed_agent.text
 
 
-def test_api_batch_extraction_remains_unmodified(
-    app_instance, client, tmp_path: Path
-) -> None:
+def test_api_batch_extraction_remains_unmodified(app_instance, client, tmp_path: Path) -> None:
     from app.api.dependencies import get_obsidian_writer
 
     vault = tmp_path / "batch_vault"
@@ -421,4 +419,3 @@ def test_api_batch_extraction_remains_unmodified(
     assert batch_res.json()["succeeded"] == 1
     assert "X-Obsidian-Status" not in batch_res.headers
     assert not vault.exists()
-

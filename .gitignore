@@ -30,4 +30,5 @@ storage/uploads/*
 *.sqlite
 *.sqlite3
 tmp/
+storage/pytest-*/
 

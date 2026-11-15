@@ -6,7 +6,6 @@ import ast
 import importlib
 from pathlib import Path
 
-
 _DECOUPLED_PACKAGES = ("core", "services", "extractors", "schemas", "utils")
 _FORBIDDEN_WEB_MODULES = {"fastapi", "starlette", "uvicorn"}
 
@@ -51,7 +50,9 @@ def test_core_preserves_domain_exception_exports() -> None:
 
 
 def test_api_layer_owns_exception_handler_registration() -> None:
-    """register_exception_handlers must live in app.api.exception_handlers and wire into app.main."""
+    """
+    register_exception_handlers must live in app.api.exception_handlers and wire into app.main.
+    """
     api_handlers = importlib.import_module("app.api.exception_handlers")
     main_module = importlib.import_module("app.main")
 

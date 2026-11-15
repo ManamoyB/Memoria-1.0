@@ -51,7 +51,9 @@ def test_pdf_extractor_multipage_metadata_and_empty_pages(
     pdf = fitz.open()
     page1 = pdf.new_page()
     page1.insert_text((72, 72), "MemoriaOS Overview", fontsize=20)
-    page1.insert_text((72, 110), "Deterministic PDF extraction preserves page numbers.", fontsize=11)
+    page1.insert_text(
+        (72, 110), "Deterministic PDF extraction preserves page numbers.", fontsize=11
+    )
     pdf.new_page()  # Page 2 intentionally empty
     pdf.set_metadata({"title": "MultiPage Spec", "author": "Architect", "subject": "RAG"})
     pdf.save(str(pdf_path))
@@ -151,7 +153,7 @@ def test_text_extractor_bom_fallback_and_invalid_encoding(
     tmp_path: Path, extraction_context: ExtractionContext
 ) -> None:
     bom_path = tmp_path / "bom.txt"
-    bom_path.write_bytes(codecs.BOM_UTF8 + "First line\nSecond line\n\nNext para.".encode("utf-8"))
+    bom_path.write_bytes(codecs.BOM_UTF8 + b"First line\nSecond line\n\nNext para.")
     bom_result = TextExtractor().extract(bom_path, extraction_context)
     assert bom_result.encoding == "utf-8-sig"
     assert "First line\nSecond line" in bom_result.raw_text
@@ -174,11 +176,7 @@ def test_markdown_extractor_bom_setext_and_structure(
 ) -> None:
     md_path = tmp_path / "setext.md"
     payload = (
-        "Setext Title\n"
-        "============\n\n"
-        "Line one\nLine two\n\n"
-        "## ATX Subheading\n\n"
-        "- Bullet A\n"
+        "Setext Title\n============\n\nLine one\nLine two\n\n## ATX Subheading\n\n- Bullet A\n"
     )
     md_path.write_bytes(codecs.BOM_UTF8 + payload.encode("utf-8"))
     result = MarkdownExtractor().extract(md_path, extraction_context)
@@ -264,9 +262,7 @@ def test_csv_extractor_malformed_quoting_short_rows_and_bom(
         CsvExtractor().extract(trailing_quote_csv, extraction_context)
 
     bom_csv = tmp_path / "bom.csv"
-    bom_csv.write_bytes(
-        codecs.BOM_UTF8 + 'id,label\n1,"hello, world"\n2,ready\n'.encode("utf-8")
-    )
+    bom_csv.write_bytes(codecs.BOM_UTF8 + b'id,label\n1,"hello, world"\n2,ready\n')
     bom_result = CsvExtractor().extract(bom_csv, extraction_context)
     assert bom_result.encoding == "utf-8-sig"
     assert bom_result.tables[0].headers == ["id", "label"]
@@ -274,4 +270,3 @@ def test_csv_extractor_malformed_quoting_short_rows_and_bom(
         {"id": "1", "label": "hello, world"},
         {"id": "2", "label": "ready"},
     ]
-

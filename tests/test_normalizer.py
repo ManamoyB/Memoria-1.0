@@ -14,7 +14,9 @@ def test_normalizer_builds_hierarchical_sections_chunks_and_deterministic_id() -
         format=DocumentFormat.MARKDOWN,
         blocks=[
             RawBlock(type=BlockType.HEADING, text="Root   Topic", level=1, page_number=1),
-            RawBlock(type=BlockType.PARAGRAPH, text="Cafe\u0301   overview\r\nline.", page_number=1),
+            RawBlock(
+                type=BlockType.PARAGRAPH, text="Cafe\u0301   overview\r\nline.", page_number=1
+            ),
             RawBlock(type=BlockType.HEADING, text="Subtopic", level=2, page_number=2),
             RawBlock(type=BlockType.CODE_BLOCK, text="  def run():\n      return 1", page_number=2),
         ],

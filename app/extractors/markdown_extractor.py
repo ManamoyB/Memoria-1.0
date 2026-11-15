@@ -35,7 +35,10 @@ _TABLE_SEP_RE = re.compile(r"^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?$")
 
 
 class MarkdownExtractor(BaseExtractor):
-    """Extracts frontmatter, ATX/Setext headings, line breaks, lists, code, and tables from Markdown."""
+    """
+    Extracts frontmatter, ATX/Setext headings, line breaks, lists, code, and tables from
+    Markdown.
+    """
 
     name = "markdown_structural_extractor"
     supported_format = DocumentFormat.MARKDOWN
@@ -182,11 +185,7 @@ class MarkdownExtractor(BaseExtractor):
                     continue
 
             # Pipe Table
-            if (
-                "|" in line
-                and idx + 1 < len(lines)
-                and _TABLE_SEP_RE.match(lines[idx + 1].strip())
-            ):
+            if "|" in line and idx + 1 < len(lines) and _TABLE_SEP_RE.match(lines[idx + 1].strip()):
                 flush_paragraph()
                 headers = self._split_pipe_row(line)
                 idx += 2
@@ -214,9 +213,7 @@ class MarkdownExtractor(BaseExtractor):
                 blocks.append(
                     RawBlock(
                         type=BlockType.TABLE,
-                        text="\n".join(
-                            [" | ".join(headers), *[" | ".join(r) for r in rows]]
-                        ),
+                        text="\n".join([" | ".join(headers), *[" | ".join(r) for r in rows]]),
                         metadata={"table_index": len(tables) - 1},
                     )
                 )

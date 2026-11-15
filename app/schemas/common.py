@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -59,9 +59,7 @@ class ErrorResponse(BaseModel):
     message: str = Field(..., description="Human-readable error description.")
     details: dict[str, Any] = Field(default_factory=dict)
     request_id: str | None = Field(default=None)
-    timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class HealthResponse(BaseModel):
@@ -76,9 +74,7 @@ class HealthResponse(BaseModel):
     ocr_enabled: bool
     ocr_engine: str
     supported_formats: list[DocumentFormat]
-    timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class ServiceInfoResponse(BaseModel):
@@ -94,9 +90,7 @@ class ServiceInfoResponse(BaseModel):
     api_prefix: str
     docs_url: str = Field(default="/docs")
     supported_formats: list[DocumentFormat]
-    timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class DocumentStatusResponse(BaseModel):
@@ -112,9 +106,7 @@ class DocumentStatusResponse(BaseModel):
     block_count: int = Field(default=0, ge=0)
     processing_time_ms: float = Field(default=0.0, ge=0.0)
     warnings: list[str] = Field(default_factory=list)
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class FormatCapability(BaseModel):

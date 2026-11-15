@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -38,7 +38,7 @@ def _flatten_sections(sections: list[Any], depth: int = 0) -> list[str]:
     lines: list[str] = []
     for section in sections:
         title = str(section.title).replace("\n", " ").strip()
-        lines.append(f'{"  " * depth}- {title} (level {section.level})')
+        lines.append(f"{'  ' * depth}- {title} (level {section.level})")
         lines.extend(_flatten_sections(section.children, depth + 1))
     return lines
 
@@ -54,16 +54,25 @@ def _render_tables(document: NormalizedDocument) -> str:
             headers = list(table.records[0].keys())
             rows = [[record.get(header, "") for header in headers] for record in table.records]
         if headers:
-            rendered.append("| " + " | ".join(str(v).replace("|", "\\|").replace("\n", " ") for v in headers) + " |")
+            rendered.append(
+                "| "
+                + " | ".join(str(v).replace("|", "\\|").replace("\n", " ") for v in headers)
+                + " |"
+            )
             rendered.append("| " + " | ".join("---" for _ in headers) + " |")
             for row in rows:
                 values = [str(v).replace("|", "\\|").replace("\n", " ") for v in row]
                 values = (values + [""] * len(headers))[: len(headers)]
                 rendered.append("| " + " | ".join(values) + " |")
         else:
-            rendered.append(f"_Table contains {table.row_count} rows and {table.column_count} columns._")
+            rendered.append(
+                f"_Table contains {table.row_count} rows and {table.column_count} columns._"
+            )
         if table.truncated:
-            rendered.append(f"\n> [!warning] Table truncated: {table.total_row_count or table.row_count} total rows.")
+            rendered.append(
+                "\n> [!warning] Table truncated: "
+                f"{table.total_row_count or table.row_count} total rows."
+            )
         rendered.append("")
     return "\n".join(rendered).strip()
 
@@ -73,7 +82,7 @@ class MarkdownNoteBuilder:
 
     def build(self, document: NormalizedDocument, *, note_status: str = "ingested") -> str:
         title = document.metadata.title or Path(document.filename).stem
-        timestamp = document.ingested_at.astimezone(timezone.utc).isoformat()
+        timestamp = document.ingested_at.astimezone(UTC).isoformat()
         tags = ["memoria/raw-document", document.document_type.value]
         fields = {
             "title": title,
@@ -105,7 +114,8 @@ class MarkdownNoteBuilder:
             "",
             f"- **Source:** {document.source.filename}",
             f"- **Format:** {document.document_type.value}",
-            f"- **Pages:** {document.metadata.page_count if document.metadata.page_count is not None else 'Not applicable'}",
+            "- **Pages:** "
+            f"{document.metadata.page_count if document.metadata.page_count is not None else 'Not applicable'}",
             f"- **Words:** {document.metadata.word_count}",
             f"- **Chunks:** {document.metadata.chunk_count}",
             f"- **Extractor:** {document.metadata.extractor_name}",
@@ -118,17 +128,19 @@ class MarkdownNoteBuilder:
             lines.extend(["", "## Extracted tables", "", _render_tables(document)])
         if sections:
             lines.extend(["", "## Document section outline", "", *sections])
-        lines.extend([
-            "",
-            "## Source provenance",
-            "",
-            f"- **Document ID:** `{document.document_id}`",
-            f"- **Content hash:** `{document.source.content_hash}`",
-            f"- **Original byte size:** {document.source.byte_size}",
-            f"- **Ingested at:** {timestamp}",
-            f"- **Reader agent:** {document.agent}",
-            f"- **Schema version:** {document.schema_version}",
-        ])
+        lines.extend(
+            [
+                "",
+                "## Source provenance",
+                "",
+                f"- **Document ID:** `{document.document_id}`",
+                f"- **Content hash:** `{document.source.content_hash}`",
+                f"- **Original byte size:** {document.source.byte_size}",
+                f"- **Ingested at:** {timestamp}",
+                f"- **Reader agent:** {document.agent}",
+                f"- **Schema version:** {document.schema_version}",
+            ]
+        )
         if document.extraction_warnings:
             lines.extend(["", "## Extraction warnings", ""])
             lines.extend(f"- {warning}" for warning in document.extraction_warnings)

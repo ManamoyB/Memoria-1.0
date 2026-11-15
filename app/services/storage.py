@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import time
 import uuid
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import AsyncIterator, BinaryIO
+from typing import BinaryIO
 
 from app.core.exceptions import EmptyDocumentError, FileTooLargeError, StorageError
 from app.utils.file_utils import compute_sha256, sanitize_filename

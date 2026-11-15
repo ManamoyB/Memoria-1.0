@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import (
     APIRouter,
@@ -164,7 +164,7 @@ _PROCESS_SUCCESS_EXAMPLE = {
     "processing_time_ms": 2.2,
 }
 
-_COMMON_UPLOAD_ERROR_RESPONSES = {
+_COMMON_UPLOAD_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     408: {
         "model": ErrorResponse,
         "description": "Request exceeded configured processing timeout.",
@@ -218,7 +218,10 @@ _COMMON_UPLOAD_ERROR_RESPONSES = {
                 "example": {
                     "status": "error",
                     "error_code": "PASSWORD_PROTECTED_DOCUMENT",
-                    "message": "PDF document 'locked.pdf' is password-protected and cannot be read without decryption.",
+                    "message": (
+                        "PDF document 'locked.pdf' is password-protected and cannot be "
+                        "read without decryption."
+                    ),
                     "details": {"filename": "locked.pdf", "is_encrypted": True},
                     "request_id": "req-1234",
                 }
@@ -227,13 +230,17 @@ _COMMON_UPLOAD_ERROR_RESPONSES = {
     },
     500: {
         "model": ErrorResponse,
-        "description": "Unexpected internal error (raw stack traces and filesystem paths are never exposed).",
+        "description": (
+            "Unexpected internal error (raw stack traces and filesystem paths are never exposed)."
+        ),
         "content": {
             "application/json": {
                 "example": {
                     "status": "error",
                     "error_code": "INTERNAL_SERVER_ERROR",
-                    "message": "An unexpected internal error occurred while processing the document.",
+                    "message": (
+                        "An unexpected internal error occurred while processing the document."
+                    ),
                     "details": {},
                     "request_id": "req-1234",
                 }
@@ -267,15 +274,24 @@ async def get_supported_formats(
 
 _OBSIDIAN_HEADERS_OPENAPI = {
     "X-Obsidian-Status": {
-        "description": "Obsidian ingestion outcome (created, recreated, or already_ingested) when save_to_obsidian=true.",
+        "description": (
+            "Obsidian ingestion outcome (created, recreated, or "
+            "already_ingested) when save_to_obsidian=true."
+        ),
         "schema": {"type": "string"},
     },
     "X-Obsidian-Created": {
-        "description": "Whether a note file was written on disk ('true' or 'false') when save_to_obsidian=true.",
+        "description": (
+            "Whether a note file was written on disk ('true' or 'false') when "
+            "save_to_obsidian=true."
+        ),
         "schema": {"type": "string"},
     },
     "X-Obsidian-Note-Path": {
-        "description": "Vault-relative path of the persisted Markdown note inside 00-Inbox when save_to_obsidian=true.",
+        "description": (
+            "Vault-relative path of the persisted Markdown note inside "
+            "00-Inbox when save_to_obsidian=true."
+        ),
         "schema": {"type": "string"},
     },
 }
@@ -431,7 +447,8 @@ async def extract_documents_batch(
         )
     if len(files) > settings.max_batch_files:
         raise MemoriaReaderError(
-            f"Batch size ({len(files)}) exceeds maximum allowed limit of {settings.max_batch_files}.",
+            f"Batch size ({len(files)}) exceeds maximum allowed limit of "
+            f"{settings.max_batch_files}.",
             status_code=status.HTTP_400_BAD_REQUEST,
             error_code="BATCH_LIMIT_EXCEEDED",
             details={"received": len(files), "max_batch_files": settings.max_batch_files},
@@ -443,10 +460,7 @@ async def extract_documents_batch(
         chunk_overlap=chunk_overlap,
     )
     request_id = getattr(request.state, "request_id", None)
-    items = [
-        (iter_upload_chunks(f), f.filename or "untitled", f.content_type)
-        for f in files
-    ]
+    items = [(iter_upload_chunks(f), f.filename or "untitled", f.content_type) for f in files]
     return await controller.process_async_batch(
         items,
         chunking_config=chunking_cfg,

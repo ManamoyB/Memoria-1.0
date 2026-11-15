@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import time
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import AsyncIterator, BinaryIO
+from typing import BinaryIO
 
 from app.core.config import Settings
 from app.core.exceptions import MemoriaReaderError
@@ -240,9 +241,7 @@ class ProcessingController:
             filename=filename,
             content_type=content_type,
         )
-        stored = await self._storage.save_async_chunks(
-            chunks, filename=safe_name, extension=ext
-        )
+        stored = await self._storage.save_async_chunks(chunks, filename=safe_name, extension=ext)
         try:
             return self._run_pipeline_on_path(
                 file_path=stored.path,
@@ -310,7 +309,9 @@ class ProcessingController:
                         filename=safe_name,
                         status=ExtractionStatus.FAILED,
                         error_code="INTERNAL_SERVER_ERROR",
-                        error_message="An unexpected internal error occurred while processing the document.",
+                        error_message=(
+                            "An unexpected internal error occurred while processing the document."
+                        ),
                     )
                 )
 

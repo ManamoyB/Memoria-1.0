@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import time
 import uuid
+from collections import defaultdict, deque
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,10 +15,12 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import Response
 
+from app.api.body_limit import BodyLimitMiddleware
 from app.api.exception_handlers import register_exception_handlers
 from app.api.routes import api_router, root_router
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging, get_logger
+from app.memory.repository import MemoryError
 from app.schemas.common import ErrorResponse
 from app.services.storage import UploadStorageService
 
@@ -67,6 +71,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             purged,
         )
         yield
+        memory_runtime = getattr(_app.state, "memory_runtime", None)
+        if memory_runtime is not None:
+            memory_runtime.close()
         logger.info("Shutting down %s", resolved_settings.app_name)
 
     application = FastAPI(
@@ -84,6 +91,102 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         debug=resolved_settings.debug,
         lifespan=lifespan,
     )
+    from app.api.routes.memory import router as memory_router
+    from app.api.routes.memory import runtime
+
+    application.include_router(memory_router, prefix=resolved_settings.api_prefix)
+    rate_windows: defaultdict[str, deque[float]] = defaultdict(deque)
+
+    @application.exception_handler(MemoryError)
+    async def memory_error_handler(request: Request, exc: MemoryError) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status,
+            content={
+                "error_code": exc.code,
+                "message": str(exc),
+                "request_id": getattr(request.state, "request_id", None),
+            },
+        )
+
+    @application.middleware("http")
+    async def authenticate_memory_requests(
+        request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        prefix = resolved_settings.api_prefix
+        public = {
+            "/",
+            "/health",
+            prefix + "/health",
+            prefix + "/formats",
+            prefix + "/documents/supported-formats",
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+        }
+        legacy_test = resolved_settings.environment == "test" and (
+            request.url.path.startswith(prefix + "/documents")
+            or request.url.path == prefix + "/agent/execute"
+        )
+        if request.method == "OPTIONS" or request.url.path in public or legacy_test:
+            return await call_next(request)
+        if not request.url.path.startswith(prefix + "/"):
+            return await call_next(request)
+        try:
+            header = request.headers.get("Authorization", "")
+            if not header.startswith("Bearer "):
+                raise MemoryError("Bearer credential required", "UNAUTHORIZED", 401)
+            rt = runtime(request)
+            identity = await asyncio.to_thread(rt.repo.authenticate, header[7:])
+            request.state.principal = identity
+            if (
+                request.url.path.startswith(prefix + "/documents")
+                or request.url.path == prefix + "/agent/execute"
+            ):
+                required = "read" if request.method == "GET" else "execute"
+                if required not in identity["scopes"] and "admin" not in identity["scopes"]:
+                    raise MemoryError("Credential lacks required scope", "FORBIDDEN", 403)
+                # Legacy status tracking and vault ledger are owner-local, not multi-tenant.
+                if identity["user_id"] != rt.settings.owner_id:
+                    raise MemoryError(
+                        "Legacy workbench is owner-only; use ingestion API", "FORBIDDEN", 403
+                    )
+                if request.query_params.get("save_to_obsidian", "false").lower() in ("true", "1"):
+                    from app.obsidian.config import DEFAULT_VAULT_FOLDERS, ObsidianConfig
+
+                    vault = ObsidianConfig.from_env().resolved_vault_path()
+                    if not vault.is_dir() or any(
+                        not (vault / folder).is_dir() or (vault / folder).resolve().parent != vault
+                        for folder in DEFAULT_VAULT_FOLDERS
+                    ):
+                        raise MemoryError(
+                            ("Existing vault layout is unavailable"), "VAULT_UNAVAILABLE", 503
+                        )
+            stamp = time.monotonic()
+            window = rate_windows[identity["id"]]
+            while window and window[0] < stamp - 60:
+                window.popleft()
+            if len(window) >= rt.settings.rate_limit_per_minute:
+                raise MemoryError("Request rate limit exceeded", "RATE_LIMITED", 429)
+            window.append(stamp)
+            content_length = request.headers.get("Content-Length")
+            if (
+                content_length
+                and int(content_length) > resolved_settings.max_file_size_bytes + 1048576
+            ):
+                raise MemoryError("Request exceeds upload limit", "PAYLOAD_TOO_LARGE", 413)
+        except MemoryError as exc:
+            return await memory_error_handler(request, exc)
+        except Exception:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "error_code": "SERVICE_UNAVAILABLE",
+                    "message": (
+                        "Memory database is unavailable; check initialization and configuration"
+                    ),
+                },
+            )
+        return await call_next(request)
 
     @application.middleware("http")
     async def attach_request_id_and_timeout(
@@ -96,7 +199,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 call_next(request),
                 timeout=resolved_settings.request_timeout_seconds,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(
                 "Request timed out after %.2fs",
                 resolved_settings.request_timeout_seconds,
@@ -116,13 +219,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return response
 
     cors_origins = resolved_settings.cors_origin_list
+    application.add_middleware(
+        BodyLimitMiddleware,
+        max_bytes=resolved_settings.max_file_size_bytes * resolved_settings.max_batch_files
+        + 1048576,
+    )
     allow_credentials = "*" not in cors_origins
     application.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,
         allow_credentials=allow_credentials,
-        allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"],
         expose_headers=["X-Request-ID"],
     )
 

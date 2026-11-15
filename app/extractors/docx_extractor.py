@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import time
 from collections import Counter
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from docx import Document as load_docx
 from docx.document import Document as DocxDocument
@@ -29,7 +30,10 @@ from app.utils.text_utils import count_lines, count_words
 
 
 class DocxExtractor(BaseExtractor):
-    """Extracts reading-order paragraphs, styles, headings, tables, and core props from DOCX files."""
+    """
+    Extracts reading-order paragraphs, styles, headings, tables, and core props from DOCX
+    files.
+    """
 
     name = "python_docx_extractor"
     supported_format = DocumentFormat.DOCX

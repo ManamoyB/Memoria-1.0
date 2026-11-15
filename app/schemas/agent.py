@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -76,6 +76,4 @@ class AgentTaskResponse(BaseModel):
         default=MemoriaAgentId.CONTEXT_UNDERSTANDING.value,
         description="Recommended downstream MemoriaOS target agent.",
     )
-    timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))

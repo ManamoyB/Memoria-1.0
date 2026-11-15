@@ -22,9 +22,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     """Attach centralized exception handlers to the FastAPI application."""
 
     @app.exception_handler(MemoriaReaderError)
-    async def handle_memoria_error(
-        request: Request, exc: MemoriaReaderError
-    ) -> JSONResponse:
+    async def handle_memoria_error(request: Request, exc: MemoriaReaderError) -> JSONResponse:
         request_id = _resolve_request_id(request)
         logger.warning(
             "Domain error [%s]: %s",
@@ -66,9 +64,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(Exception)
-    async def handle_unexpected_error(
-        request: Request, exc: Exception
-    ) -> JSONResponse:
+    async def handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
         request_id = _resolve_request_id(request)
         logger.exception(
             "Unhandled server error: %s",

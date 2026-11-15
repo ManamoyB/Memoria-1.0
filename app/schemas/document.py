@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -23,9 +23,7 @@ class DocumentSource(BaseModel):
     content_hash: str = Field(
         ..., description="SHA-256 hex digest of raw bytes prefixed with 'sha256:'."
     )
-    ingested_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    ingested_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class DocumentBlock(BaseModel):
@@ -54,7 +52,9 @@ class DocumentBlock(BaseModel):
     )
     metadata: dict[str, Any] = Field(
         default_factory=dict,
-        description="Extractor-specific structural hints (e.g., code language, style, list marker).",
+        description=(
+            "Extractor-specific structural hints (e.g., code language, style, list marker)."
+        ),
     )
 
 
@@ -162,7 +162,9 @@ class DocumentMetadata(BaseModel):
     extractor_name: str
     custom_properties: dict[str, Any] = Field(
         default_factory=dict,
-        description="Format-native properties (e.g., Markdown frontmatter, CSV delimiter, DOCX styles).",
+        description=(
+            "Format-native properties (e.g., Markdown frontmatter, CSV delimiter, DOCX styles)."
+        ),
     )
 
 
@@ -228,9 +230,7 @@ class NormalizedDocument(BaseModel):
     filename: str = Field(..., description="Sanitized original filename.")
     document_type: DocumentFormat
     status: ExtractionStatus = Field(default=ExtractionStatus.SUCCESS)
-    ingested_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    ingested_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     source: DocumentSource
     metadata: DocumentMetadata
     content: str = Field(
@@ -243,9 +243,7 @@ class NormalizedDocument(BaseModel):
     pages: list[PageReference] = Field(default_factory=list)
     chunks: list[DocumentChunk] = Field(default_factory=list)
     ocr: OcrMetadata = Field(default_factory=OcrMetadata)
-    processing_statistics: ProcessingStatistics = Field(
-        default_factory=ProcessingStatistics
-    )
+    processing_statistics: ProcessingStatistics = Field(default_factory=ProcessingStatistics)
     extraction_warnings: list[str] = Field(default_factory=list)
     processing_time_ms: float = Field(..., ge=0.0)
 

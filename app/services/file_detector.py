@@ -14,14 +14,14 @@ from app.utils.file_utils import detect_document_format
 _PDF_MAGIC = b"%PDF-"
 _ZIP_MAGICS = (b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08")
 _BINARY_EXCLUSION_MAGICS = (
-    b"\x7fELF",       # Linux ELF
-    b"MZ",            # Windows PE/EXE
-    b"\x89PNG\r\n",   # PNG image
+    b"\x7fELF",  # Linux ELF
+    b"MZ",  # Windows PE/EXE
+    b"\x89PNG\r\n",  # PNG image
     b"\xff\xd8\xff",  # JPEG image
-    b"GIF87a",        # GIF image
-    b"GIF89a",        # GIF image
-    b"\x1f\x8b",      # GZIP
-    b"Rar!",          # RAR
+    b"GIF87a",  # GIF image
+    b"GIF89a",  # GIF image
+    b"\x1f\x8b",  # GZIP
+    b"Rar!",  # RAR
 )
 
 
@@ -99,7 +99,8 @@ class FileDetector:
         for magic in _BINARY_EXCLUSION_MAGICS:
             if header.startswith(magic):
                 raise UnsupportedFormatError(
-                    f"Binary file signature detected for '{file_path.name}'; expected '{expected_format.value}'.",
+                    f"Binary file signature detected for '{file_path.name}'; "
+                    f"expected '{expected_format.value}'.",
                     details={"filename": file_path.name, "expected_format": expected_format.value},
                 )
 

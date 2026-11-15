@@ -17,6 +17,11 @@ dependencies = [
     "PyMuPDF>=1.25.0,<2.0.0",
     "python-docx>=1.1.0,<2.0.0",
     "pandas>=2.2.0,<3.0.0",
+    "httpx>=0.28.0,<1.0.0",
+    "SQLAlchemy>=2.0,<3",
+    "alembic>=1.14,<2",
+    "psycopg[binary]>=3.2,<4",
+    "langgraph>=1,<2",
 ]
 
 [project.optional-dependencies]
@@ -47,3 +52,6 @@ select = ["E", "F", "I", "UP", "B"]
 python_version = "3.12"
 strict = true
 warn_unused_ignores = true
+
+[tool.setuptools.packages.find]
+include = ["app*", "memoria*", "scripts*"]

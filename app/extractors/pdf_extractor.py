@@ -7,7 +7,7 @@ from pathlib import Path
 from statistics import median
 from typing import Any
 
-import fitz
+import fitz  # type: ignore[import-untyped]
 
 from app.core.exceptions import (
     CorruptedDocumentError,
@@ -48,7 +48,10 @@ class PdfExtractor(BaseExtractor):
         file_path: Path,
         context: ExtractionContext,
     ) -> ExtractedContent:
-        """Extract text page by page, preserve page numbers, detect scans/encryption, and record warnings."""
+        """
+        Extract text page by page, preserve page numbers, detect scans/encryption, and record
+        warnings.
+        """
         started = time.perf_counter()
         self.validate_file(file_path, context)
 
@@ -70,14 +73,13 @@ class PdfExtractor(BaseExtractor):
                     authenticated = False
                 if not authenticated or doc.needs_pass:
                     raise PasswordProtectedDocumentError(
-                        f"PDF document '{file_path.name}' is password-protected and cannot be read without decryption.",
+                        f"PDF document '{file_path.name}' is password-protected "
+                        "and cannot be read without decryption.",
                         details={"filename": file_path.name, "is_encrypted": True},
                     )
 
             if doc.page_count == 0:
-                raise EmptyDocumentError(
-                    f"PDF document '{file_path.name}' contains zero pages."
-                )
+                raise EmptyDocumentError(f"PDF document '{file_path.name}' contains zero pages.")
 
             raw_metadata = doc.metadata or {}
             blocks: list[RawBlock] = []
@@ -106,7 +108,8 @@ class PdfExtractor(BaseExtractor):
                 except Exception as page_exc:
                     failed_pages += 1
                     warnings.append(
-                        f"Failed to extract page {page_number}: {sanitize_error_reason(page_exc, replacement_name=file_path.name)}"
+                        f"Failed to extract page {page_number}: "
+                        f"{sanitize_error_reason(page_exc, replacement_name=file_path.name)}"
                     )
                     pages.append(
                         RawPageReference(
@@ -125,9 +128,8 @@ class PdfExtractor(BaseExtractor):
                     empty_pages.append(page_number)
                     warnings.append(f"Page {page_number} contains no selectable text.")
 
-                potentially_scanned = (
-                    extracted_chars < context.pdf_min_text_chars_per_page
-                    or (has_images and extracted_chars < context.pdf_min_text_chars_per_page * 2)
+                potentially_scanned = extracted_chars < context.pdf_min_text_chars_per_page or (
+                    has_images and extracted_chars < context.pdf_min_text_chars_per_page * 2
                 )
 
                 page_ocr_applied = False
@@ -135,7 +137,8 @@ class PdfExtractor(BaseExtractor):
                     pages_requiring_ocr.append(page_number)
                     if not is_empty:
                         warnings.append(
-                            f"Page {page_number} has low selectable text density ({extracted_chars} chars) and may be scanned."
+                            f"Page {page_number} has low selectable text density "
+                            f"({extracted_chars} chars) and may be scanned."
                         )
                     ocr_blocks = self._try_ocr_page(
                         page=page,
@@ -368,7 +371,8 @@ class PdfExtractor(BaseExtractor):
             return []
         if self._ocr_engine is None or not self._ocr_engine.is_available():
             notes.append(
-                f"Page {page_number} flagged for OCR, but OCR engine '{context.ocr_engine_name}' is unavailable."
+                f"Page {page_number} flagged for OCR, but OCR engine "
+                f"'{context.ocr_engine_name}' is unavailable."
             )
             return []
 

@@ -1,4 +1,7 @@
-"""Unit tests for FileDetector, FileValidator, DocumentChunker, and framework-free ProcessingController."""
+"""
+Unit tests for FileDetector, FileValidator, DocumentChunker, and framework-free
+ProcessingController.
+"""
 
 from __future__ import annotations
 
@@ -61,9 +64,7 @@ def _build_controller(tmp_path: Path, max_mb: int = 1) -> ProcessingController:
         max_file_size_bytes=settings.max_file_size_bytes,
     )
     normalizer = DocumentNormalizer(
-        chunker=DocumentChunker(
-            default_config=ChunkingConfig(chunk_size=3000, chunk_overlap=300)
-        )
+        chunker=DocumentChunker(default_config=ChunkingConfig(chunk_size=3000, chunk_overlap=300))
     )
     return ProcessingController(
         settings=settings,
@@ -169,9 +170,7 @@ def test_chunker_preserves_paragraphs_pages_and_handles_large_documents() -> Non
     assert all(c.page_numbers == [4] for c in split_chunks)
 
 
-def test_processing_controller_works_without_fastapi(
-    tmp_path: Path, sample_md_path: Path
-) -> None:
+def test_processing_controller_works_without_fastapi(tmp_path: Path, sample_md_path: Path) -> None:
     controller = _build_controller(tmp_path)
 
     # 1. File path invocation (e.g. LangGraph local node)

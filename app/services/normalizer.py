@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import Iterable
+from collections.abc import Iterable
 
 from app.extractors.base import ExtractedContent, RawBlock, RawPageReference, RawTable
 from app.schemas.common import BlockType, ExtractionStatus, OcrStatus
@@ -204,7 +204,7 @@ class DocumentNormalizer:
                     root_sections.append(section_node)
 
                 section_stack.append(section_node)
-                parent_section_id = section_id
+                parent_section_id: str | None = section_id
             else:
                 parent_section_id = section_stack[-1].section_id if section_stack else None
                 if section_stack:
@@ -231,15 +231,9 @@ class DocumentNormalizer:
         normalized: list[TableData] = []
         for idx, raw_table in enumerate(raw_tables):
             headers = [canonicalize_whitespace(h) for h in raw_table.headers]
-            rows = [
-                [canonicalize_whitespace(cell) for cell in row]
-                for row in raw_table.rows
-            ]
+            rows = [[canonicalize_whitespace(cell) for cell in row] for row in raw_table.rows]
             records = [
-                {
-                    canonicalize_whitespace(k): canonicalize_whitespace(v)
-                    for k, v in rec.items()
-                }
+                {canonicalize_whitespace(k): canonicalize_whitespace(v) for k, v in rec.items()}
                 for rec in raw_table.records
             ]
             col_count = max(

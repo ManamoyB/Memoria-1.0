@@ -40,9 +40,7 @@ async def test_process_markdown_async_httpx_and_status_lookup(
     assert list(test_settings.upload_dir.iterdir()) == []
 
     # Verify status tracking endpoint
-    status_res = await async_client.get(
-        f"/api/v1/documents/{payload['document_id']}/status"
-    )
+    status_res = await async_client.get(f"/api/v1/documents/{payload['document_id']}/status")
     assert status_res.status_code == 200
     status_body = status_res.json()
     assert status_body["document_id"] == payload["document_id"]
@@ -157,9 +155,7 @@ def test_reject_oversized_file(client: TestClient) -> None:
     assert response.json()["error_code"] == "FILE_TOO_LARGE"
 
 
-def test_reject_corrupted_and_password_protected_pdf(
-    client: TestClient, tmp_path: Path
-) -> None:
+def test_reject_corrupted_and_password_protected_pdf(client: TestClient, tmp_path: Path) -> None:
     response = client.post(
         "/api/v1/documents/process",
         files={"file": ("broken.pdf", b"not-a-valid-pdf", "application/pdf")},
